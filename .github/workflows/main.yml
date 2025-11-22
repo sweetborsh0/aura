@@ -23,10 +23,8 @@ jobs:
       with:
         packages: |
           fastfetch-git
-          google-chrome
-          spotify
-          nvidia-container-toolkit-bin
-          # ← сюда просто добавляй свои пакеты, каждый с новой строки
+          amneziavpn-bin
+          
 
     - name: Publish to Releases
       uses: softprops/action-gh-release@v2
