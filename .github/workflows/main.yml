@@ -1,47 +1,53 @@
 name: Build AUR Packages
-
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:           # чтобы можно было запускать вручную
+  workflow_dispatch:
   schedule:
-    - cron: "17 2 * * 0"        # каждый воскресенье в 2:17 UTC — оставь как есть
+    - cron: "17 2 * * 0"
 
 jobs:
   build_repository:
     runs-on: ubuntu-latest
     permissions:
-      contents: write           # обязательно для релизов и gh-pages
-
+      contents: write
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Build Packages
-      id: build
-      uses: ./
-      with:
-        packages: |
-          fastfetch-git
-          amneziavpn-bin
-          dl-desktop-git
-          
+      - name: Build Packages
+        id: build
+        uses: ./
+        with:
+          packages: |
+            fastfetch-git
+            amneziavpn-bin
+            dl-desktop-git
 
-    - name: Publish to Releases
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: latest
-        name: Latest AUR build
-        prerelease: true
-        files: |
-          ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
-          ${{ steps.build.outputs.package_dir }}/aurci2.db*
-          ${{ steps.build.outputs.package_dir }}/aurci2.files*
+      - name: Publish to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest AUR build
+          prerelease: true
+          files: |
+            ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
+            ${{ steps.build.outputs.package_dir }}/aurci2.db*
+            ${{ steps.build.outputs.package_dir }}/aurci2.files*
+      - name: Install Git LFS
+        run: git lfs install
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ${{ steps.build.outputs.package_dir }}
-        publish_branch: gh-pages
-        force_orphan: true
+      - name: Enable LFS for all .pkg.tar.zst files
+        run: git lfs track "*.pkg.tar.zst"
+
+      - name: Commit .gitattributes (if changed)
+        run: |
+          git add .gitattributes
+          git commit -m "Track .pkg.tar.zst with Git LFS" || echo "No changes to commit"
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ steps.build.outputs.package_dir }}
+          publish_branch: gh-pages
+          force_orphan: true
