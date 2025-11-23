@@ -1,45 +1,35 @@
-#!/usr/bin/env bash
-
-# Fail if anything goes wrong.
+#!/bin/bash
 set -e
-# Print each line before executing.
-set -x
 
-# Get list of all packages with dependencies to install.
-packages_with_aur_dependencies="$(aur depends --pkgname $INPUT_PACKAGES $INPUT_MISSING_AUR_DEPENDENCIES)"
-echo "AUR Packages requested to install: $INPUT_PACKAGES"
-echo "AUR Packages to fix missing dependencies: $INPUT_MISSING_AUR_DEPENDENCIES"
-echo "AUR Packages to install (including dependencies): $packages_with_aur_dependencies"
+# Пакеты (из input или дефолт)
+PACKAGES="${INPUT_PACKAGES:-fastfetch-git amneziavpn-bin dl-desktop-git}"
 
-# Sync repositories.
-pacman -Sy
+echo "Собираю пакеты: $PACKAGES"
 
-# Check for optional missing pacman dependencies to install.
-if [ -n "$INPUT_MISSING_PACMAN_DEPENDENCIES" ]
-then
-    echo "Additional Pacman packages to install: $INPUT_MISSING_PACMAN_DEPENDENCIES"
-    pacman --noconfirm -S $INPUT_MISSING_PACMAN_DEPENDENCIES
-fi
+# Обновляем систему
+pacman -Syu --noconfirm
 
-# Add the packages to the local repository.
-sudo --user builder \
-    aur sync \
-    --noconfirm --noview \
-    --database aurci2 --root /local_repository \
-    $packages_with_aur_dependencies
+# Билдим каждый
+for pkg in $PACKAGES; do
+  echo "=== $pkg ==="
+  cd /tmp
+  rm -rf "$pkg"
+  git clone https://aur.archlinux.org/"$pkg".git
+  cd "$pkg"
+  makepkg --noconfirm --skippgpcheck  # Без проверки подписей, чтоб не падало
+  cp *.pkg.tar.zst /local_repository/
+  cd ..
+done
 
-# Move the local repository to the workspace.
-if [ -n "$GITHUB_WORKSPACE" ]
-then
-    rm -f /local_repository/*.old
-    echo "Moving repository to github workspace"
-    mv /local_repository/* $GITHUB_WORKSPACE/
-    # make sure that the .db/.files files are in place
-    # Note: Symlinks fail to upload, so copy those files
-    cd $GITHUB_WORKSPACE
-    rm aurci2.db aurci2.files
-    cp aurci2.db.tar.gz aurci2.db
-    cp aurci2.files.tar.gz aurci2.files
-else
-    echo "No github workspace known (GITHUB_WORKSPACE is unset)."
-fi
+# База репо
+cd /local_repository
+repo-add aurci2.db.tar.gz *.pkg.tar.zst
+
+# Files для pacman
+find . -name "*.pkg.tar.zst" -exec pacman -Qlp {} \; | sort -u > aurci2.files
+
+echo "Готово! Файлы в /local_repository:"
+ls -la /local_repository/
+
+# Output для workflow
+echo "package_dir=/local_repository" >> $GITHUB_OUTPUT
