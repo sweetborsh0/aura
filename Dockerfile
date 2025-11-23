@@ -43,21 +43,31 @@ RUN \
 USER builder
 
 # Build aurutils as unprivileged user.
+#RUN \
+#    gpg --import /tmp/gpg_key_6BC26A17B9B7018A.gpg.asc && \
+#    cd /tmp/ && \
+#    # curl --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
+#    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/plain/aurutils.tar.gz?h=aurutils && \
+#    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
+#    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/plain/aurutils.tar.gz?h=aurutils && \
+#    curl -L -H "Accept: application/x-git-tar" \
+#     "https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz" \
+#     --output aurutils.tar.gz && \
+#    tar xf aurutils.tar.gz && \
+#    cd aurutils && \
+#    makepkg --syncdeps --noconfirm && \
+#    sudo pacman -U --noconfirm aurutils-*.pkg.tar.zst && \
+#    cp /tmp/aurutils/aurutils-*.pkg.tar.zst /local_repository/ && \
+#    repo-add /local_repository/aurci2.db.tar.gz /local_repository/aurutils-*.pkg.tar.zst
 RUN \
     gpg --import /tmp/gpg_key_6BC26A17B9B7018A.gpg.asc && \
     cd /tmp/ && \
-    # curl --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
-    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/plain/aurutils.tar.gz?h=aurutils && \
-    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
-    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/plain/aurutils.tar.gz?h=aurutils && \
-    curl -L -H "Accept: application/x-git-tar" \
-     "https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz" \
-     --output aurutils.tar.gz && \
+    curl -L "https://aur.mirror.pkgbuild.com/aurutils/aurutils.tar.gz" -o aurutils.tar.gz && \
     tar xf aurutils.tar.gz && \
-    cd aurutils && \
+    cd aurutils-* && \
     makepkg --syncdeps --noconfirm && \
     sudo pacman -U --noconfirm aurutils-*.pkg.tar.zst && \
-    cp /tmp/aurutils/aurutils-*.pkg.tar.zst /local_repository/ && \
+    cp aurutils-*.pkg.tar.zst /local_repository/ && \
     repo-add /local_repository/aurci2.db.tar.gz /local_repository/aurutils-*.pkg.tar.zst
 
 
