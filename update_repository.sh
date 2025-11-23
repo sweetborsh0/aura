@@ -12,7 +12,7 @@ for pkg in $PACKAGES; do
     echo "=== $pkg ==="
     cd /tmp
     rm -rf "$pkg"
-    pacamn -S git
+    pacman -Sy git
     git clone --depth 1 https://aur.archlinux.org/"$pkg".git
     cd "$pkg"
     makepkg -s --noconfirm --needed --skippgpcheck
