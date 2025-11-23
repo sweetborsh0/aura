@@ -4,32 +4,26 @@ description: >
 branding:
   icon: package
   color: blue
-
 inputs:
   packages:
     description: >
-      A string with a space separated list of AUR packages that should
-      be built and included in the repository.
+        A string with a space separated list of aur packages that should
+        be built and included in the repository.
     required: true
   missing_pacman_dependencies:
     description: >
-      A string with a space separated list of dependencies that are not
-      correctly mentioned as dependencies in the PKGBUILD file and that
-      are available from pacman.
+        A string with a space separated list of dependencies that are not
+        correctly mentioned as dependencies in the PKGBUILD file and that
+        are available from pacman.
     required: false
     default: ""
   missing_aur_dependencies:
     description: >
-      A string with a space separated list of dependencies that are not
-      correctly mentioned as dependencies in the PKGBUILD file and that
-      are available from AUR.
+        A string with a space separated list of dependencies that are not
+        correctly mentioned as dependencies in the PKGBUILD file and that
+        are available from AUR.
     required: false
     default: ""
-
-outputs:
-  package_dir:
-    description: "Where packages are stored"
-
 runs:
-  using: "docker"
-  image: "Dockerfile"
+  using: 'docker'
+  image: 'Dockerfile'
