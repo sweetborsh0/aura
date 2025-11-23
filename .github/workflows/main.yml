@@ -4,8 +4,6 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-  schedule:
-    - cron: "17 2 * * 0"
 
 jobs:
   build_repository:
@@ -23,17 +21,24 @@ jobs:
         with:
           packages: |
             fastfetch-git
-            amneziavpn-bin
-            dl-desktop-git
+
+      - name: Set tag for release
+        id: tag
+        run: |
+          # Если хочешь, можно автоматический тег по дате
+          echo "TAG_NAME=aur-build-$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
 
       - name: Publish to Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: Latest AUR build
+          tag_name: ${{ env.TAG_NAME }}
+          name: "AUR build ${{ env.TAG_NAME }}"
           prerelease: true
           files: |
             ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
             ${{ steps.build.outputs.package_dir }}/aurci2.db*
             ${{ steps.build.outputs.package_dir }}/aurci2.files*
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify files
+        run: ls -lh ${{ steps.build.outputs.package_dir }}
