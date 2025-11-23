@@ -1,12 +1,13 @@
-name: Build and Deploy
+name: Build and Release
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,38 +15,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Устанавливаем базовые пакеты для Arch сборки через Docker
+      # 2. Устанавливаем зависимости для сборки (можно добавить свои)
       - name: Install dependencies
+        run: sudo apt update && sudo apt install -y git make gcc
+
+      # 3. Собираем пакет (пример, можно поменять на свой скрипт)
+      - name: Build package
         run: |
-          sudo apt update
-          sudo apt install -y docker.io git
+          mkdir -p output
+          echo "Dummy package content" > output/package.txt
+          # если у тебя реально makepkg: ./build.sh или makepkg
 
-      # 3. Создаём контейнер Arch и билдим пакет внутри него (не root)
-      - name: Build Arch package
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace archlinux:latest /bin/bash -c "
-          pacman -Sy --noconfirm git base-devel
-          useradd -m builder
-          su builder -c 'mkdir -p ~/repo && cd ~/repo && git clone https://aur.archlinux.org/fastfetch-git.git && cd fastfetch-git && makepkg -si --noconfirm'
-          "
-
-      # 4. Загружаем собранные файлы как артефакты
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      # 4. Загружаем в Release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         with:
-          path: repo/fastfetch-git/*.pkg.tar.zst
+          tag_name: v1.0.${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      # 1. Скачиваем артефакты
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
         with:
-          path: repo
-
-      # 2. Деплой на GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./output/package.txt
+          asset_name: package.txt
+          asset_content_type: text/plain
