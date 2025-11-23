@@ -20,7 +20,7 @@ jobs:
         uses: ./
         with:
           packages: |
-            fastfetch-git
+            dl-desktop-git
 
       - name: Publish to Releases
         uses: softprops/action-gh-release@v2
