@@ -14,34 +14,32 @@ echo "AUR Packages to install (including dependencies): $packages_with_aur_depen
 # Sync repositories.
 pacman -Sy
 
-# Check for optional missing pacman dependencies to install.
-if [ -n "$INPUT_MISSING_PACMAN_DEPENDENCIES" ]
-then
+# Install optional missing pacman dependencies
+if [ -n "$INPUT_MISSING_PACMAN_DEPENDENCIES" ]; then
     echo "Additional Pacman packages to install: $INPUT_MISSING_PACMAN_DEPENDENCIES"
     pacman --noconfirm -S $INPUT_MISSING_PACMAN_DEPENDENCIES
 fi
 
-# Add the packages to the local repository.
+# Add the packages to the local repository
 sudo --user builder \
     aur sync \
     --noconfirm --noview \
     --database aurci2 --root /local_repository \
     $packages_with_aur_dependencies
 
-# Move the local repository to the workspace.
-if [ -n "$GITHUB_WORKSPACE" ]
-then
+# Move the local repository to the workspace
+if [ -n "$GITHUB_WORKSPACE" ]; then
     rm -f /local_repository/*.old
     echo "Moving repository to github workspace"
-    mv /local_repository/* $GITHUB_WORKSPACE/
-    # make sure that the .db/.files files are in place
-    # Note: Symlinks fail to upload, so copy those files
-    cd $GITHUB_WORKSPACE
-    rm aurci2.db aurci2.files
+    mv /local_repository/* "$GITHUB_WORKSPACE/"
+    cd "$GITHUB_WORKSPACE"
+    # Copy .db/.files files instead of symlinks
+    rm -f aurci2.db aurci2.files
     cp aurci2.db.tar.gz aurci2.db
     cp aurci2.files.tar.gz aurci2.files
 else
     echo "No github workspace known (GITHUB_WORKSPACE is unset)."
 fi
 
+# Set the GitHub Action output
 echo "package_dir=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
