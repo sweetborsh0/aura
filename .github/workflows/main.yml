@@ -1,52 +1,54 @@
-name: Build AUR Packages
+name: Build AUR packages
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
-  schedule:
-    - cron: "17 2 * * 0"
+  push:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
+    container:
+      image: archlinux:latest
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Build packages
-        id: build
-        uses: ./
-        with:
-          packages: |
-            fastfetch-git
-            amneziavpn-bin
-            dl-desktop-git
+    - name: Install base-devel and tools
+      run: |
+        pacman -Sy --noconfirm archlinux-keyring
+        pacman-key --init
+        pacman-key --populate archlinux
+        pacman -Syu --noconfirm base-devel git
 
-      # Выкладываем все .pkg.tar.zst в Releases (они всегда доступны)
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest AUR build
-          prerelease: true
-          files: |
-            ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
-            ${{ steps.build.outputs.package_dir }}/aurci2.db*
-            ${{ steps.build.outputs.package_dir }}/aurci2.files*
+    - name: Make build dir
+      run: mkdir build
 
-      # В gh-pages кидаем только базу и index.html — БЕЗ больших .pkg.tar.zst
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{ steps.build.outputs.package_dir }}
-          publish_branch: gh-pages
-          force_orphan: true
-          # exclude_assets: "*.pkg.tar.zst"   # ← эта строчка решает все твои беды
-          # создаём простой index.html, чтобы сайт не 404
-          commit_message: Update repo
-      - name: Show output path (debug)
-        run: echo "Package dir = ${{ steps.build.outputs.package_dir }}"
-          # если хочешь красивый index — положи свой index.html в корень репо, он тоже задеплоится
+    - name: Build PKGBUILD
+      run: |
+        cp PKGBUILD build/
+        cd build
+        makepkg -s --noconfirm --clean --cleanbuild
+
+    - name: Upload package to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        files: build/*.pkg.tar.zst
+
+    - name: Generate DB files
+      run: |
+        cd build
+        repo-add aura.db.tar.gz *.pkg.tar.zst
+        mv aura.db.tar.gz aura.db
+        mv aura.files.tar.gz aura.files
+
+    - name: Publish DB to gh-pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: build
+        publish_branch: gh-pages
+        force_orphan: true
+        # ВАЖНО: исключаем пакеты, но НЕ DB
+        exclude_assets: "*.pkg.tar.zst"
