@@ -1,4 +1,4 @@
-name: Build AUR Packages
+name: Build Arch Repo
 
 on:
   push:
@@ -8,45 +8,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     container:
       image: archlinux:latest
+      options: --privileged
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fix pacman keyring
+      - name: Init Pacman Keys (working)
         run: |
-          # Правильная инициализация ключей
-          pacman-key --init --batch
+          pacman-key --init
           pacman-key --populate archlinux
-          pacman-key --refresh-keys || true
-
-          # Разрешаем автозагрузку слабых и старых ключей (иначе иногда падает)
-          echo "keyserver-options auto-key-retrieve" >> /etc/pacman.d/gnupg/gpg.conf
-          echo "allow-weak-key-signatures" >> /etc/pacman.d/gnupg/gpg.conf
-
           pacman -Sy --noconfirm archlinux-keyring
-          pacman -Syu --noconfirm base-devel git
 
-      - name: Build package
-        run: |
-          cd aur
-          makepkg --noconfirm --syncdeps --clean --cleanbuild
+      - name: Install build tools
+        run: pacman -Syu --noconfirm base-devel git
 
-      - name: Generate DB
+      - name: Build packages from PKGBUILDs folder
         run: |
           mkdir -p repo
-          mv aur/*.pkg.tar.zst repo/
+          for pkg in fastfetch-git amneziavpn-bin dl-desktop-git; do
+            git clone https://aur.archlinux.org/$pkg.git
+            cd $pkg
+            makepkg -sf --noconfirm
+            mv *.pkg.tar.zst ../repo
+            cd ..
+          done
 
+      - name: Create repo database
+        run: |
           cd repo
           repo-add aura.db.tar.gz *.pkg.tar.zst
-          mv aura.db.tar.gz aura.db
-          mv aura.files.tar.gz aura.files || true
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./repo
+          publish_dir: repo
           publish_branch: gh-pages
+          force_orphan: true
