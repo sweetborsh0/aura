@@ -1,41 +1,68 @@
-name: Build fastfetch AUR Package
-
+name: Build AUR Packages
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * 0"
 
 jobs:
-  build_fastfetch:
+  build_repository:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build fastfetch-git package
+      - name: Verify workspace
+        run: |
+          echo "Files in workspace:"
+          ls -la /github/workspace
+
+      - name: Build Packages
         id: build
         uses: ./
         with:
-          packages: fastfetch-git
+          packages: |
+            fastfetch-git
+            amneziavpn-bin
+            dl-desktop-git
 
-      - name: Set tag for release
-        id: tag
+      - name: Verify package_dir
         run: |
-          echo "TAG_NAME=fastfetch-aur-$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
+          echo "Package dir:"
+          echo "${{ steps.build.outputs.package_dir }}"
+          ls -la "${{ steps.build.outputs.package_dir }}" || echo "Package dir missing!"
 
-      - name: Verify build directory
-        run: |
-          echo "Files in package_dir:"
-          ls -lh ${{ steps.build.outputs.package_dir }}
-
-      - name: Publish release
+      - name: Publish to Releases
+        if: steps.build.outputs.package_dir != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: "fastfetch-git AUR build ${{ env.TAG_NAME }}"
+          tag_name: latest
+          name: Latest AUR build
           prerelease: true
-          files: ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
-          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
+            ${{ steps.build.outputs.package_dir }}/aurci2.db*
+            ${{ steps.build.outputs.package_dir }}/aurci2.files*
+
+      - name: Install Git LFS
+        run: git lfs install
+
+      - name: Enable LFS for all .pkg.tar.zst files
+        run: git lfs track "*.pkg.tar.zst"
+
+      - name: Commit .gitattributes (if changed)
+        run: |
+          git add .gitattributes
+          git commit -m "Track .pkg.tar.zst with Git LFS" || echo "No changes to commit"
+
+      - name: Deploy to GitHub Pages
+        if: steps.build.outputs.package_dir != ''
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ steps.build.outputs.package_dir }}
+          publish_branch: gh-pages
+          force_orphan: true
