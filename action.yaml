@@ -24,6 +24,9 @@ inputs:
         are available from AUR.
     required: false
     default: ""
+outputs:
+  package_dir:
+    description: "Where packages are stored"
 runs:
   using: 'docker'
   image: 'Dockerfile'
