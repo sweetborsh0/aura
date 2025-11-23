@@ -27,3 +27,7 @@ inputs:
 runs:
   using: 'docker'
   image: 'Dockerfile'
+outputs:
+  package_dir:
+    description: 'Папка с пакетами'
+    value: ${{ steps.build.outputs.package_dir }}
