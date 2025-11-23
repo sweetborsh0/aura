@@ -5,7 +5,7 @@ PACKAGES="${INPUT_PACKAGES:-fastfetch-git amneziavpn-bin dl-desktop-git}"
 
 echo "Собираю: $PACKAGES"
 
-# Обновляем систему (на всякий)
+# Обновляем систему
 pacman -Syu --noconfirm
 
 for pkg in $PACKAGES; do
@@ -14,11 +14,7 @@ for pkg in $PACKAGES; do
     rm -rf "$pkg"
     git clone --depth 1 https://aur.archlinux.org/"$pkg".git
     cd "$pkg"
-
-    # ← ВОТ ЭТО ВСЁ РЕШАЕТ: makepkg сам ставит недостающие зависимости
-    makepkg -s --noconfirm --needed --skippgpcheck || \
     makepkg -s --noconfirm --needed --skippgpcheck
-
     cp *.pkg.tar.zst /repo/
 done
 
