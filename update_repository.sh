@@ -43,3 +43,5 @@ then
 else
     echo "No github workspace known (GITHUB_WORKSPACE is unset)."
 fi
+
+echo "package_dir=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
