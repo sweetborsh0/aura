@@ -1,4 +1,4 @@
-name: Build AUR Packages
+name: Build fastfetch AUR Package
 
 on:
   push:
@@ -6,39 +6,36 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_repository:
+  build_fastfetch:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build Packages
+      - name: Build fastfetch-git package
         id: build
         uses: ./
         with:
-          packages: |
-            fastfetch-git
+          packages: fastfetch-git
 
       - name: Set tag for release
         id: tag
         run: |
-          # Если хочешь, можно автоматический тег по дате
-          echo "TAG_NAME=aur-build-$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+          echo "TAG_NAME=fastfetch-aur-$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
-      - name: Publish to Releases
+      - name: Verify build directory
+        run: |
+          echo "Files in package_dir:"
+          ls -lh ${{ steps.build.outputs.package_dir }}
+
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}
-          name: "AUR build ${{ env.TAG_NAME }}"
+          name: "fastfetch-git AUR build ${{ env.TAG_NAME }}"
           prerelease: true
-          files: |
-            ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
-            ${{ steps.build.outputs.package_dir }}/aurci2.db*
-            ${{ steps.build.outputs.package_dir }}/aurci2.files*
+          files: ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify files
-        run: ls -lh ${{ steps.build.outputs.package_dir }}
