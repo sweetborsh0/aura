@@ -18,7 +18,7 @@ jobs:
       - name: Verify workspace
         run: |
           echo "Files in workspace:"
-          ls -la /github/workspace
+          ls -la "$GITHUB_WORKSPACE"
 
       - name: Build Packages
         id: build
