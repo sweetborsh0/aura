@@ -1,13 +1,10 @@
-name: "Build AUR packages"
-description: "Сборка AUR-пакетов без aurutils"
+name: "AUR Builder"
 inputs:
   packages:
-    description: "Список пакетов (по одному на строку)"
     required: true
 outputs:
   package_dir:
-    description: "Папка с готовыми пакетами и базой"
-    value: /local_repository
+    value: /repo
 runs:
-  using: "docker"
-  image: "Dockerfile"
+  using: docker
+  image: Dockerfile
