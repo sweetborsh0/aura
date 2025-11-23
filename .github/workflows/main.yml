@@ -1,58 +1,51 @@
-name: Build AUR package
+name: Build and Deploy
 
 on:
   push:
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    container:
-      image: archlinux:latest
-
     steps:
-      - name: Checkout
+      # 1. Скачиваем репозиторий
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Устанавливаем базовые пакеты для Arch сборки через Docker
       - name: Install dependencies
         run: |
-          pacman -Sy --noconfirm git base-devel pacman-contrib
+          sudo apt update
+          sudo apt install -y docker.io git
 
-      - name: Create builder user
+      # 3. Создаём контейнер Arch и билдим пакет внутри него (не root)
+      - name: Build Arch package
         run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace archlinux:latest /bin/bash -c "
+          pacman -Sy --noconfirm git base-devel
           useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-      - name: Fix workspace permissions
-        run: |
-          chown -R builder:builder "$GITHUB_WORKSPACE"
-
-      - name: Build package
-        run: |
-          sudo -u builder bash -c "
-            cd $GITHUB_WORKSPACE
-            git clone https://aur.archlinux.org/fastfetch-git.git
-            cd fastfetch-git
-            makepkg -sf --noconfirm
+          su builder -c 'mkdir -p ~/repo && cd ~/repo && git clone https://aur.archlinux.org/fastfetch-git.git && cd fastfetch-git && makepkg -si --noconfirm'
           "
 
-      - name: Create repo
-        run: |
-          mkdir -p repo
-          mv fastfetch-git/*.pkg.tar.zst repo/
-          repo-add repo/aura.db.tar.gz repo/*.pkg.tar.zst
-
-      - name: Upload to GitHub Pages
-        uses: actions/upload-pages-artifact@v2
+      # 4. Загружаем собранные файлы как артефакты
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: repo
+          path: repo/fastfetch-git/*.pkg.tar.zst
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
+
     steps:
-      - uses: actions/deploy-pages@v2
+      # 1. Скачиваем артефакты
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          path: repo
+
+      # 2. Деплой на GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
