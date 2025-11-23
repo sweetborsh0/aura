@@ -1,46 +1,39 @@
-name: Build and Release
+name: Build AUR Packages
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * 0"
 
 jobs:
-  build-release:
+  build_repository:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      # 1. Скачиваем репозиторий
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Устанавливаем зависимости для сборки (можно добавить свои)
-      - name: Install dependencies
-        run: sudo apt update && sudo apt install -y git make gcc
-
-      # 3. Собираем пакет (пример, можно поменять на свой скрипт)
-      - name: Build package
-        run: |
-          mkdir -p output
-          echo "Dummy package content" > output/package.txt
-          # если у тебя реально makepkg: ./build.sh или makepkg
-
-      # 4. Загружаем в Release
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Build Packages
+        id: build
+        uses: ./
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          release_name: Release ${{ github.run_number }}
-          draft: false
-          prerelease: false
+          packages: |
+            fastfetch-git
+            amneziavpn-bin
+            dl-desktop-git
+
+      - name: Publish to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest AUR build
+          prerelease: true
+          files: |
+            ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
+            ${{ steps.build.outputs.package_dir }}/aurci2.db*
+            ${{ steps.build.outputs.package_dir }}/aurci2.files*
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/package.txt
-          asset_name: package.txt
-          asset_content_type: text/plain
