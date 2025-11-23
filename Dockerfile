@@ -48,7 +48,8 @@ RUN \
     cd /tmp/ && \
     # curl --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
     # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/plain/aurutils.tar.gz?h=aurutils && \
-    curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
+    # curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/aurutils.tar.gz && \
+    curl -L --output aurutils.tar.gz https://aur.archlinux.org/cgit/aur.git/plain/aurutils.tar.gz?h=aurutils && \
     tar xf aurutils.tar.gz && \
     cd aurutils && \
     makepkg --syncdeps --noconfirm && \
