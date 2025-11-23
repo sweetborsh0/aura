@@ -1,8 +1,7 @@
-name: Build Arch Repo
+name: Build AUR package
 
 on:
   push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -11,46 +10,49 @@ jobs:
 
     container:
       image: archlinux:latest
-      options: --privileged
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Init pacman keys
+      - name: Install dependencies
         run: |
-          pacman-key --init
-          pacman-key --populate archlinux
-          pacman -Sy --noconfirm archlinux-keyring
+          pacman -Sy --noconfirm git base-devel pacman-contrib
 
-      - name: Install tools
-        run: pacman -Syu --noconfirm base-devel git sudo
-
-      - name: Create non-root builder user
+      - name: Create builder user
         run: |
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-          chown -R builder:builder /github/workspace
 
-      - name: Build packages
+      - name: Fix workspace permissions
+        run: |
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Build package
+        run: |
+          sudo -u builder bash -c "
+            cd $GITHUB_WORKSPACE
+            git clone https://aur.archlinux.org/fastfetch-git.git
+            cd fastfetch-git
+            makepkg -sf --noconfirm
+          "
+
+      - name: Create repo
         run: |
           mkdir -p repo
-          for pkg in fastfetch-git amneziavpn-bin dl-desktop-git; do
-            sudo -u builder git clone https://aur.archlinux.org/$pkg.git
-            cd $pkg
-            sudo -u builder makepkg -sf --noconfirm
-            mv *.pkg.tar.zst ../repo
-            cd ..
-          done
+          mv fastfetch-git/*.pkg.tar.zst repo/
+          repo-add repo/aura.db.tar.gz repo/*.pkg.tar.zst
 
-      - name: Create repo database
-        run: |
-          cd repo
-          repo-add aura.db.tar.gz *.pkg.tar.zst
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: repo
-          publish_branch: gh-pages
-          force_orphan: true
+          path: repo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v2
