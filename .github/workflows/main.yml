@@ -1,9 +1,9 @@
-name: Build AUR packages
+name: Build AUR Packages
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,43 +12,41 @@ jobs:
       image: archlinux:latest
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install base-devel and tools
-      run: |
-        pacman -Sy --noconfirm archlinux-keyring
-        pacman-key --init
-        pacman-key --populate archlinux
-        pacman -Syu --noconfirm base-devel git
+      - name: Fix pacman keyring
+        run: |
+          # Правильная инициализация ключей
+          pacman-key --init --batch
+          pacman-key --populate archlinux
+          pacman-key --refresh-keys || true
 
-    - name: Make build dir
-      run: mkdir build
+          # Разрешаем автозагрузку слабых и старых ключей (иначе иногда падает)
+          echo "keyserver-options auto-key-retrieve" >> /etc/pacman.d/gnupg/gpg.conf
+          echo "allow-weak-key-signatures" >> /etc/pacman.d/gnupg/gpg.conf
 
-    - name: Build PKGBUILD
-      run: |
-        cp PKGBUILD build/
-        cd build
-        makepkg -s --noconfirm --clean --cleanbuild
+          pacman -Sy --noconfirm archlinux-keyring
+          pacman -Syu --noconfirm base-devel git
 
-    - name: Upload package to GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: latest
-        files: build/*.pkg.tar.zst
+      - name: Build package
+        run: |
+          cd aur
+          makepkg --noconfirm --syncdeps --clean --cleanbuild
 
-    - name: Generate DB files
-      run: |
-        cd build
-        repo-add aura.db.tar.gz *.pkg.tar.zst
-        mv aura.db.tar.gz aura.db
-        mv aura.files.tar.gz aura.files
+      - name: Generate DB
+        run: |
+          mkdir -p repo
+          mv aur/*.pkg.tar.zst repo/
 
-    - name: Publish DB to gh-pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: build
-        publish_branch: gh-pages
-        force_orphan: true
-        # ВАЖНО: исключаем пакеты, но НЕ DB
-        exclude_assets: "*.pkg.tar.zst"
+          cd repo
+          repo-add aura.db.tar.gz *.pkg.tar.zst
+          mv aura.db.tar.gz aura.db
+          mv aura.files.tar.gz aura.files || true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./repo
+          publish_branch: gh-pages
