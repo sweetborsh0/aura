@@ -59,17 +59,27 @@ USER builder
 #    sudo pacman -U --noconfirm aurutils-*.pkg.tar.zst && \
 #    cp /tmp/aurutils/aurutils-*.pkg.tar.zst /local_repository/ && \
 #    repo-add /local_repository/aurci2.db.tar.gz /local_repository/aurutils-*.pkg.tar.zst
+#RUN \
+#    gpg --import /tmp/gpg_key_6BC26A17B9B7018A.gpg.asc && \
+#    cd /tmp/ && \
+#    curl -L "https://aur.mirror.pkgbuild.com/aurutils/aurutils.tar.gz" -o aurutils.tar.gz && \
+#    tar xf aurutils.tar.gz && \
+#    cd aurutils-* && \
+#    makepkg --syncdeps --noconfirm && \
+#    sudo pacman -U --noconfirm aurutils-*.pkg.tar.zst && \
+#    cp aurutils-*.pkg.tar.zst /local_repository/ && \
+#    repo-add /local_repository/aurci2.db.tar.gz /local_repository/aurutils-*.pkg.tar.zst
 RUN \
     gpg --import /tmp/gpg_key_6BC26A17B9B7018A.gpg.asc && \
     cd /tmp/ && \
-    curl -L "https://aur.mirror.pkgbuild.com/aurutils/aurutils.tar.gz" -o aurutils.tar.gz && \
+    curl -L "https://github.com/AladW/aurutils/releases/latest/download/aurutils.tar.gz" \
+         -o aurutils.tar.gz && \
     tar xf aurutils.tar.gz && \
     cd aurutils-* && \
     makepkg --syncdeps --noconfirm && \
     sudo pacman -U --noconfirm aurutils-*.pkg.tar.zst && \
     cp aurutils-*.pkg.tar.zst /local_repository/ && \
     repo-add /local_repository/aurci2.db.tar.gz /local_repository/aurutils-*.pkg.tar.zst
-
 
 USER root
 # Note: Github actions require the dockerfile to be run as root, so do not
