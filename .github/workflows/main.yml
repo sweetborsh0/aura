@@ -44,7 +44,7 @@ jobs:
           publish_dir: ${{ steps.build.outputs.package_dir }}
           publish_branch: gh-pages
           force_orphan: true
-          exclude_assets: "*.pkg.tar.zst"   # ← эта строчка решает все твои беды
+          # exclude_assets: "*.pkg.tar.zst"   # ← эта строчка решает все твои беды
           # создаём простой index.html, чтобы сайт не 404
           commit_message: Update repo
       - name: Show output path (debug)
