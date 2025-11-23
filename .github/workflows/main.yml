@@ -8,33 +8,36 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     container:
       image: archlinux:latest
       options: --privileged
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Init Pacman Keys (working)
+      - name: Init pacman keys
         run: |
           pacman-key --init
           pacman-key --populate archlinux
           pacman -Sy --noconfirm archlinux-keyring
 
-      - name: Install build tools
-        run: pacman -Syu --noconfirm base-devel git
+      - name: Install tools
+        run: pacman -Syu --noconfirm base-devel git sudo
 
-      - name: Build packages from PKGBUILDs folder
+      - name: Create non-root builder user
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder /github/workspace
+
+      - name: Build packages
         run: |
           mkdir -p repo
           for pkg in fastfetch-git amneziavpn-bin dl-desktop-git; do
-            git clone https://aur.archlinux.org/$pkg.git
+            sudo -u builder git clone https://aur.archlinux.org/$pkg.git
             cd $pkg
-            makepkg -sf --noconfirm
+            sudo -u builder makepkg -sf --noconfirm
             mv *.pkg.tar.zst ../repo
             cd ..
           done
