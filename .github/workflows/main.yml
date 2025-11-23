@@ -17,8 +17,6 @@ jobs:
         with:
           packages: |
             fastfetch-git
-            amneziavpn-bin
-            dl-desktop-git
 
       - name: Publish to Release
         uses: softprops/action-gh-release@v2
