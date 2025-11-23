@@ -47,4 +47,6 @@ jobs:
           exclude_assets: "*.pkg.tar.zst"   # ← эта строчка решает все твои беды
           # создаём простой index.html, чтобы сайт не 404
           commit_message: Update repo
+      - name: Show output path (debug)
+        run: echo "Package dir = ${{ steps.build.outputs.package_dir }}"
           # если хочешь красивый index — положи свой index.html в корень репо, он тоже задеплоится
