@@ -1,4 +1,5 @@
 name: Build AUR Packages
+
 on:
   push:
     branches: [ main ]
@@ -7,15 +8,16 @@ on:
     - cron: "17 2 * * 0"
 
 jobs:
-  build_repository:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      packages: write
 
-      - name: Build Packages
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build packages
         id: build
         uses: ./
         with:
@@ -24,8 +26,8 @@ jobs:
             amneziavpn-bin
             dl-desktop-git
 
-      - name: Publish to Releases
-        uses: softprops/action-gh-release@v2
+      # Выкладываем все .pkg.tar.zst в Releases (они всегда доступны)
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Latest AUR build
@@ -34,20 +36,15 @@ jobs:
             ${{ steps.build.outputs.package_dir }}/*.pkg.tar.zst
             ${{ steps.build.outputs.package_dir }}/aurci2.db*
             ${{ steps.build.outputs.package_dir }}/aurci2.files*
-      - name: Install Git LFS
-        run: git lfs install
 
-      - name: Enable LFS for all .pkg.tar.zst files
-        run: git lfs track "*.pkg.tar.zst"
-
-      - name: Commit .gitattributes (if changed)
-        run: |
-          git add .gitattributes
-          git commit -m "Track .pkg.tar.zst with Git LFS" || echo "No changes to commit"
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      # В gh-pages кидаем только базу и index.html — БЕЗ больших .pkg.tar.zst
+      - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{ steps.build.outputs.package_dir }}
           publish_branch: gh-pages
           force_orphan: true
+          exclude_assets: "*.pkg.tar.zst"   # ← эта строчка решает все твои беды
+          # создаём простой index.html, чтобы сайт не 404
+          commit_message: Update repo
+          # если хочешь красивый index — положи свой index.html в корень репо, он тоже задеплоится
